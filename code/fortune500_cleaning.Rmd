@@ -25,7 +25,7 @@ Treballarem amb el dataset que vam generar a la pràctica 1 amb les companyies mé
 
 Aquest dataset és interessant, ja que ens dóna una visió de quines són les companyies més importants dels EUA i de les seves característiques.
 
-Analitzant aquest conjunt de dades intentarem estudiar quin són els sectors dominants, com es reparteixen aquestes empreses geogràficament i diferència entre homes i dones que ocupen càrrecs directius.
+Analitzant aquest conjunt de dades intentarem estudiar quins són els sectors dominants i la diferència entre el nombre d'homes i dones que ocupen càrrecs directius.
 
 El dataset original es troba al següent repositori: https://github.com/victor427/PRAC1-Web-Scraping
 
