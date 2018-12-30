@@ -1,0 +1,128 @@
+---
+title: 'Pràctica 2: Neteja i validació de les dades'
+author: "Víctor Espinosa Yxart"
+date: "30 de desembre de 2018"
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(knitr)
+```
+
+****
+# Descripció del dataset.
+****
+
+Treballarem amb el dataset que vam generar a la pràctica 1 amb les companyies més importants de la llista Fortune.
+
+Aquest dataset és interessant, ja que ens dóna una visió de quines són les companyies més importants dels EUA i de les seves característiques.
+
+Analitzant aquest conjunt de dades intentarem estudiar quin són els sectors dominants, com es reparteixen aquestes empreses geogràficament i diferència entre homes i dones que ocupen càrrecs directius.
+
+El dataset original es troba al següent repositori: https://github.com/victor427/PRAC1-Web-Scraping
+
+****
+# Neteja de les dades.
+****
+
+## Carregar el fitxer
+Fem una primera inspecció del fitxer, el que podem veure és un fitxer del tipus CSV amb algunes característiques com:
+
+* Els valors es separen amb una coma ( ; )
+* Té capçalera
+* Els números fan servir la notació americana i fan servir la coma ( , ) per separar els milers i el punt ( . ) com a separador decimal
+
+Amb aquesta informació podem fer servir la funció *read.csv* per llegir el fitxer i transformar-lo en dades estructurades.
+
+```{r, warning=FALSE}
+
+inputFile <- "./PRAC1-Web-Scraping-master/data/fortune500.csv"
+
+writeLines(readLines(inputFile, n = 5))
+
+f500 <- read.csv(inputFile, header = TRUE, sep = ";", quote = "\"", dec = ".")
+
+```
+
+## Identificar les variables
+Aquestes són les diferents variables que tenim a les nostres dades i el seu tipus.
+
+* **rank**      $\rightarrow$ Quantitativa discreta
+* **title**     $\rightarrow$ Qualitativa nominal
+* **revenue**   $\rightarrow$ Quantitativa contínua
+* **ceo**       $\rightarrow$ Qualitativa nominal
+* **position**  $\rightarrow$ Qualitativa nominal
+* **sector**    $\rightarrow$ Qualitativa nominal
+* **industry**  $\rightarrow$ Qualitativa nominal
+* **hq**        $\rightarrow$ Qualitativa nominal
+* **website**   $\rightarrow$ Qualitativa nominal
+* **years**     $\rightarrow$ Quantitativa discreta
+* **employees** $\rightarrow$ Quantitativa discreta
+* **image**     $\rightarrow$ Qualitativa nominal
+
+## Corretgir el tipus de variables
+Per saber quin tipus hi ha assignat R a cada variable podem fer servir la funció class sobre el conjunt de dades. Si s'ha identificat erròniament alguna variable definirem manualment el tipus que volem.
+
+```{r, warning=FALSE}
+
+lapply(f500, class)
+
+f500[13] <- NULL
+
+f500$revenue <- gsub('[$]','',f500$revenue)
+f500$revenue <- gsub('[,]','',f500$revenue)
+
+f500$rank      <- as.integer(f500$rank)
+f500$title     <- as.factor(f500$title)
+f500$revenue   <- as.numeric(f500$revenue)
+f500$ceo       <- as.factor(f500$ceo)
+f500$position  <- as.factor(f500$position)
+f500$sector    <- as.factor(f500$sector)
+f500$industry  <- as.factor(f500$industry)
+f500$hq        <- as.factor(f500$hq)
+f500$website   <- as.factor(f500$website)
+f500$years     <- as.integer(f500$years)
+f500$employees <- as.integer(f500$employees)
+f500$image     <- as.factor(f500$image)
+
+lapply(f500, class)
+
+```
+
+
+## Búsqueda de valors atípics
+Fem un boxplot per les variables quantitatives i observem si existeixen outliers
+
+En aquest cas els outliers de la variable revenue són dades coherents, i per la variable employees no hem trobat cap valor atípic.
+
+### Boxplots de les variables quantitatives
+```{r, warning=FALSE}
+
+boxplot(f500$revenue)
+boxplot.stats(f500$revenue)$out
+
+boxplot(f500$employees)
+boxplot.stats(f500$employees)$out
+
+```
+
+## Valors perduts
+
+S'han trobat valors perduts en les variables ceo, position, industry, hq, website, years, employees i image.
+
+En el cas de les variables website i image no és rellevant, ja que no les farem servir en l'estudi del dataset i molts registres no tenen aquestes dades.
+
+Després s'han torbat 14 registres que estan incomplets i depenent de les observacions que estem fent sobre el dataset haurem de tenir present treure aquestes dades.
+
+```{r, warning=FALSE}
+sapply(f500, function(x) sum(is.na(x)))
+
+```
