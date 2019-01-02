@@ -1,12 +1,15 @@
 ---
-title: 'Pràctica 2: Neteja i validació de les dades'
-author: "Víctor Espinosa Yxart"
+title: 'Pr<c3><a0>ctica 2: Neteja i validaci<c3><b3> de les dades'
+author: "V<c3><ad>ctor Espinosa Yxart"
 date: "30 de desembre de 2018"
 output:
-  html_document:
+  pdf_document:
     toc: yes
+    toc_depth: '3'
+  html_document:
     number_sections: yes
-    toc_depth: 2
+    toc: yes
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +18,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r load_libraries, include=FALSE}
 library(knitr)
+library(gender)
+library(plotly)
+library(caret)
 ```
 
 ****
@@ -24,6 +30,19 @@ library(knitr)
 Treballarem amb el dataset que vam generar a la pràctica 1 amb les companyies més importants de la llista Fortune.
 
 Aquest dataset és interessant, ja que ens dóna una visió de quines són les companyies més importants dels EUA i de les seves característiques.
+
+* **rank**      $\rightarrow$ Posició en la llista fortune
+* **title**     $\rightarrow$ Nom de la companyia
+* **revenue**   $\rightarrow$ Ingressos de l'últim any fiscal
+* **ceo**       $\rightarrow$ Nom del CEO
+* **position**  $\rightarrow$ Càrrec que ocupa el CEO
+* **sector**    $\rightarrow$ Sector industrial en el qual opera l'empresa
+* **industry**  $\rightarrow$ Indústria dins del sector en la cual opera l'empresa
+* **hq**        $\rightarrow$ Ubicació de la seu general
+* **website**   $\rightarrow$ URL de la pàgina web de la companyia
+* **years**     $\rightarrow$ Anys en la llista fortune
+* **employees** $\rightarrow$ Nombre d'empleats
+* **image**     $\rightarrow$ Nom del fitxer amb la imatge corporativa
 
 Analitzant aquest conjunt de dades intentarem estudiar quins són els sectors dominants i la diferència entre el nombre d'homes i dones que ocupen càrrecs directius.
 
@@ -51,6 +70,8 @@ writeLines(readLines(inputFile, n = 5))
 f500 <- read.csv(inputFile, header = TRUE, sep = ";", quote = "\"", dec = ".")
 
 ```
+
+El fitxer conté `r nrow(f500)` companyies.
 
 ## Identificar les variables
 Aquestes són les diferents variables que tenim a les nostres dades i el seu tipus.
@@ -83,7 +104,7 @@ f500$revenue <- gsub('[,]','',f500$revenue)
 f500$rank      <- as.integer(f500$rank)
 f500$title     <- as.factor(f500$title)
 f500$revenue   <- as.numeric(f500$revenue)
-f500$ceo       <- as.factor(f500$ceo)
+f500$ceo       <- sapply(f500$ceo, toString)
 f500$position  <- as.factor(f500$position)
 f500$sector    <- as.factor(f500$sector)
 f500$industry  <- as.factor(f500$industry)
@@ -102,6 +123,19 @@ lapply(f500, class)
 Fem un boxplot per les variables quantitatives i observem si existeixen outliers
 
 En aquest cas els outliers de la variable revenue són dades coherents, i per la variable employees no hem trobat cap valor atípic.
+
+### Eliminar variables que no utilitzem
+
+Les variables website i image no les utilitzarem així que les eliminarem del dataset.
+
+La variable website és l'URL de la pàgina web de la companyia, la variable imatge és el nom del fitxer .jpg associat amb la imatge corporativa. No són característiques que estudiarem així que les podem deixar fora.
+
+```{r, warning=FALSE}
+# website
+f500[12] <- NULL
+# image
+f500[9] <- NULL
+```
 
 ### Boxplots de les variables quantitatives
 ```{r, warning=FALSE}
@@ -126,3 +160,209 @@ Després s'han torbat 14 registres que estan incomplets i depenent de les observa
 sapply(f500, function(x) sum(is.na(x)))
 
 ```
+
+****
+# Anàlisi de les dades.
+****
+
+## Estudi de les companyies per sector
+
+Visualitzem en un gràfic com es distribueixen les empreses de la llista per sector comercial (variable sector).
+
+Els setors comercials presents al dataset són:
+
+```{r, warning=FALSE}
+levels(f500$sector)
+
+
+plot_ly(f500, labels = ~sector, type = 'pie') %>%
+  layout(title = 'Companyies per sector',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+```
+
+El camp industry ens dóna informació sobre a quina indústria dins del sector comercial es dedica la companya, podríem veure aquest atribut com un nivell més de la categoria sector. Les categories que disposem són moltes, les podem veure a continuació en la llista, i en un gràfic general no ens aportaria gaire informació. Estudiarem aquesta variable en els sectors més importants (quant a volum d'empreses que hi participen).
+
+```{r, warning=FALSE}
+levels(f500$industry)
+
+```
+
+### Industries target al sector financer
+
+```{r, warning=FALSE}
+dfFinancials <- f500[ which(f500$sector=='Financials' & !is.na(f500$industry)), ]
+
+plot_ly(dfFinancials, labels = ~industry, type = 'pie') %>%
+  layout(title = 'Industries target al sector financer', showlegend = F,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+```
+
+### Industries target al sector tecnològic
+
+```{r, warning=FALSE}
+dfTechnology <- f500[ which(f500$sector=='Technology' & !is.na(f500$industry)), ]
+
+plot_ly(dfTechnology, labels = ~industry, type = 'pie') %>%
+  layout(title = 'Industries target al sector tecnologic', showlegend = F,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+```
+
+### Industries target al sector energètic
+
+```{r, warning=FALSE}
+dfEnergy <- f500[ which(f500$sector=='Energy' & !is.na(f500$industry)), ]
+
+plot_ly(dfEnergy, labels = ~industry, type = 'pie') %>%
+  layout(title = 'Industries target al sector energetic', showlegend = F,
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+```
+
+## Estudi dels CEOs de les companyies
+
+Estudiarem quantes dones i homes ocupen càrrecs directius en les empreses de la llisa fortune.
+
+### Incorporar la variable Sex
+
+Per a realitzar l'estudi necessitem introduir una nova variable Sex que indiqui si el CEO de l'empresa és una dona (F) o un home (M). Això ho farem amb el paquet gender.
+
+```{r, warning=FALSE}
+
+predictGender <- function(name) {
+  
+  if (is.na(name)) {
+    return(NA)
+  }
+
+  fullName <- unlist(strsplit(name, " ", fixed = TRUE))
+  
+  if (length(fullName) > 1) {
+    if (nchar(fullName[1]) > 2) {
+      name <- fullName[1]
+    } else {
+      name <- fullName[2]
+    }
+  } else {
+    name <- fullName[1]
+  }
+  
+  predGender <- gender(name)
+  
+  if (nrow(predGender) != 1) {
+    return(NA)
+  }
+  
+  gender <- predGender$gender
+  
+  if (gender == "female") {
+    return('F')
+  } else {
+    return('M')
+  }
+  
+}
+
+f500$sex <- NA
+
+f500$sex <- sapply(f500$ceo, predictGender)
+
+f500$sex  <- as.factor(f500$sex)
+
+head(f500[, c(4, 11)], n = 20)
+
+```
+
+### Gràfic Homes i dones CEOs de la llista Fortune
+
+```{r, warning=FALSE}
+f500 <- f500[ which(!is.na(f500$sex)), ]
+
+plot_ly(f500, labels = ~sex, type = 'pie') %>%
+  layout(title = 'Homes i dones CEOs de la llista Fortune',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+f500[which(f500$sex == 'F'), c(2, 4, 5)]
+
+```
+
+
+Intentarem crear un model que pugui relacionar l'observació de la variable sex amb les característiques de la companya (sector, indústria, ingressos i rànquing).
+
+### Model de regressió lineal múltiple
+
+```{r, warning=FALSE}
+
+genderToNumber <- function(sex) {
+  
+  if (sex == 'F') {
+    return(1)
+    } else {
+    return(0)
+    }
+}
+
+f500 <- f500[ which(!is.na(f500$industry)), ]
+
+f500$sexCoef <- NA
+
+f500$sexCoef <- sapply(f500$sex, genderToNumber)
+
+f500$sexCoef  <- as.numeric(f500$sexCoef)
+
+model1 <- lm(sexCoef ~ sector + industry + revenue + rank, data = f500)
+
+summary(model1)
+
+# Importància de les variables que defineixen el model:
+varImp(model1, scale = FALSE)
+
+f500$sexPred1 <- predict(model1, f500, type="response")
+
+```
+
+### Model de regressió logística
+
+```{r, warning=FALSE}
+
+model2 <- glm(sex ~ sector + industry + revenue + rank, data = f500, family = binomial(logit))
+
+summary(model2)
+
+varImp(model2, scale = FALSE)
+
+f500$sexPred2 <- predict(model2, f500, type="response")
+
+head(f500[, c(4, 11, 12, 13, 14)], n = 100)
+```
+
+****
+# Resultats i conclusions.
+****
+
+Quant als sectors podem dir que predominen el sector financer, tecnològic i energètic.
+
+Dintre de cada sector podem destacar:
+
++ En el sector financer la majoria de companyies són companyies asseguradores, bancs, o de gestió de propietats immobiliàries.
+
++ En el sector tecnològic les principals companyies s'encarreguen de la creació de components electrònics, seguidament tenim les companyies que es dediquen a crear software i després les companyies orientades a les tecnologies de la informació i comunicació.
+
++ En el sector energètic predominen dos tipus de companyies, les que es dediquen a proveir de gas i electricitat i les companyies que es dediquen a l'extracció de minerals i petroli.
+
+Referent al nombre de dones i homes que són CEOs de les empreses de la llista fortune, podem dir que la gran majoria d'empreses (en un 92,1%) estan dirigides per homes, mentre que el 7,86% restant tenen a una dona com CEO.
+
+Els models predictius extrets entre el CEO i el tipus de sector i indústria no han demostrat cap relació entre aquests fets, segurament degut al tipus de variables no són les adequades o el nombre de mostres és molt petit.
+
+****
+# Dataset resultant amb les dades netes.
+****
+
+write.csv(f500, file="fortune_clean.csv", sep = ";")
